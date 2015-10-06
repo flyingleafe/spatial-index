@@ -7,23 +7,27 @@
 #include <type_traits>
 #include <limits>
 
-#define between(a, b, c) ((a) <= (b) && (b) <= (c))
+template <typename T>
+inline bool between(T a, T b, T c) {
+    return a <= b && b <= c;
+}
 
 template <typename T>
-struct point {
+class Point {
+public:
     T x, y;
 
-    point<T>(T _x, T _y) : x(_x), y(_y) {}
+    Point<T>(T _x, T _y) : x(_x), y(_y) {}
 
-    point<T> operator+(const point<T> &p) const {
-        point<T> r;
+    const Point<T> operator+(const Point<T> &p) const {
+        Point<T> r;
         r.x = x + p.x;
         r.y = y + p.y;
         return r;
     };
 
-    point<T> operator-(const point<T> &p) const {
-        point<T> r;
+    const Point<T> operator-(const Point<T> &p) const {
+        Point<T> r;
         r.x = x - p.x;
         r.y = y - p.y;
         return r;
@@ -36,31 +40,36 @@ int sgn(T val) {
 }
 
 template <typename T>
-int mpq_turn(const point<T> &A, const point<T> &B, const point<T> &C) {
-    mpq_class Ax(A.x), Ay(A.y), Bx(B.x), By(B.y), Cx(C.x), Cy(C.y);
-    return sgn((Bx - Ax) * (Cy - Ay) - (By - Ay) * (Cx - Ax));
+int mpqTurn(const Point<T> &a, const Point<T> &b, const Point<T> &c) {
+    mpq_class ax(a.x), ay(a.y), bx(b.x), by(b.y), cx(c.x), cy(c.y);
+    return sgn((bx - ax) * (cy - ay) - (by - ay) * (cx - ax));
 }
 
 template <typename T>
-int turn(const point<T> &A, const point<T> &B, const point<T> &C) {
-    long double a1 = ((long double)(B.x - A.x))*(C.y - A.y);
-    long double a2 = ((long double)(B.y - A.y))*(C.x - A.x);
+int turn(const Point<T> &a, const Point<T> &b, const Point<T> &c) {
+    long double a1 = ((long double)(b.x - a.x))*(c.y - a.y);
+    long double a2 = ((long double)(b.y - a.y))*(c.x - a.x);
     long double val = a1 - a2;
     long double eps = 8 * std::abs(a1 + a2) * std::numeric_limits<double>::epsilon();
 
     if (std::abs(val) < eps) {
-        return mpq_turn(A, B, C);
+        return mpqTurn(a, b, c);
     }
     return sgn(val);
 }
 
+int turn(const Point<int> &a, const Point<int> &b, const Point<int> &c) {
+    return sgn((b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x));
+}
+
 template <typename T>
-struct b_box {
+class BoundingBox {
+public:
     T x1, y1, x2, y2;
 
-    b_box<T>(T _x1, T _y1, T _x2, T _y2) : x1(_x1), y1(_y1), x2(_x2), y2(_y2) {}
+    BoundingBox<T>(T _x1, T _y1, T _x2, T _y2) : x1(_x1), y1(_y1), x2(_x2), y2(_y2) {}
 
-    bool intersects_with(const b_box<T> &other) const {
+    bool intersectsWith(const BoundingBox<T> &other) const {
         return (between(x1, other.x1, x2)       || between(x1, other.x2, x2) ||
                 between(other.x1, x1, other.x2) || between(other.x1, x2, other.x2))
             && (between(y1, other.y1, y2)       || between(y1, other.y2, y2) ||
@@ -69,18 +78,19 @@ struct b_box {
 };
 
 template <typename T>
-struct segment {
-    point<T> begin, end;
+class Segment {
+public:
+    Point<T> begin, end;
 
-    segment<T>(point<T> &a, point<T> &b) : begin(a), end(b) {}
+    Segment<T>(Point<T> &a, Point<T> &b) : begin(a), end(b) {}
 
-    b_box<T> bounding_box() const {
-        return b_box<T>(std::min(begin.x, end.x), std::min(begin.y, end.y),
+    BoundingBox<T> boundingBox() const {
+        return BoundingBox<T>(std::min(begin.x, end.x), std::min(begin.y, end.y),
                         std::max(begin.x, end.x), std::max(begin.y, end.y));
     }
 
-    bool intersects_with(const segment<T> &other) const {
-        if (!bounding_box().intersects_with(other.bounding_box())) {
+    bool intersectsWith(const Segment<T> &other) const {
+        if (!boundingBox().intersectsWith(other.boundingBox())) {
             return false;
         }
 
